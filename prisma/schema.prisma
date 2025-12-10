@@ -1,0 +1,176 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+/// Enumeración para roles de usuario
+enum UserRole {
+  OWNER
+  MANAGER
+  MECHANIC
+}
+/// Enumeración para estado de ordenes de trabajo
+enum StateOrder {
+  open
+  inProgress
+  done
+  cancelled
+}
+
+/// Tenant:Garage
+model Garage {
+  id                String   @id @default(uuid())
+  name              String
+  legalName         String?
+  fiscalId          String   @unique
+  phone             String?
+  street            String?
+  city              String?
+  postalCode        String?
+  province          String?
+  country           String?
+  timezone          String   @default("Europe/Madrid")
+  currency          String   @default("EUR")
+  taxRate           Decimal  @default(21.00) @db.Decimal(5, 2)
+  invoiceNextNumber BigInt   @default(1)
+  isActive          Boolean  @default(true)
+  contactInfo       Json     @default("{}")
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt()
+
+  users    User[]    @relation("GarageUsers")
+  clients  Client[]  @relation("GarageClients")
+  vehicles Vehicle[] @relation("GarageVehicles")
+  orders WorkOrders[] @relation("GarageOrders")
+  services Service[] @relation("GarageServices")
+  consumables Consumable[] @relation("GarageConsumables")
+}
+
+/// tabla Users
+model User {
+  id                  String    @id @default(uuid())
+  garageId            String
+  name                String
+  email               String
+  passwordHash        String?
+  rol                 UserRole
+  emailVerified       Boolean   @default(false)
+  invitationToken     String?
+  invitationExpiresAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  garage Garage @relation("GarageUsers", fields: [garageId], references: [id], onDelete: Cascade)
+
+  ordersCreated WorkOrders[] @relation("OrdersCreatedBy")
+  ordersAssigned WorkOrders[] @relation("OrdersAssignedTo")
+  @@unique([garageId, email])
+}
+
+/// Tabla Clients
+model Client {
+  id        String   @id @default(uuid())
+  garageId  String
+  name      String
+  email     String
+  phone     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  garage Garage @relation("GarageClients", fields: [garageId], references: [id], onDelete: Cascade)
+
+  vehicles Vehicle[] @relation("VehicleClients")
+  orders WorkOrders[] @relation("ClientOrders")
+
+  @@unique([garageId, email])
+}
+
+/// Tabla Vehicles
+model Vehicle {
+  id           String   @id @default(uuid())
+  garageId     String
+  clientId     String
+  licensePlate String
+  brand        String?
+  model        String?
+  color        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  garage Garage @relation("GarageVehicles", fields: [garageId], references: [id], onDelete: Cascade)
+  client Client @relation("VehicleClients", fields: [clientId], references: [id], onDelete: Cascade)
+
+  orders WorkOrders[] @relation("VehicleOrders")
+
+  @@unique([garageId, licensePlate])
+}
+
+/// Tabla Work Orders
+model WorkOrders {
+  id               String     @id @default(uuid())
+  garageId         String
+  vehicleId        String
+  clientId         String
+  createdBy        String
+  assignedMechanic String?
+  description      String
+  openingDate      DateTime   @default(now())
+  closingDate      DateTime?   
+  state            StateOrder @default(open)
+  totalAmount      Decimal    @default(0) @db.Decimal(12, 2)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  garage Garage @relation("GarageOrders", fields: [garageId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation("VehicleOrders", fields: [vehicleId], references: [id], onDelete: Cascade)
+  client Client @relation("ClientOrders", fields: [clientId], references: [id], onDelete: Cascade)
+  orderCreated User? @relation("OrdersCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  orderAssigned User? @relation("OrdersAssignedTo", fields: [assignedMechanic], references: [id], onDelete: SetNull)
+
+
+//nota: es responsabilidad de la aplicación / RLS / triggers garantizar que
+//vehicle.garage_id = work_orders.garage_id y assigned_mechanic.garage_id = work_orders.garage_id
+}
+
+/// Tabla Services (catálogo de servicios por tenant:garage)
+model Service {
+  id String @id @default(uuid())
+  garageId String
+  name String
+  isHourly Boolean @default(false)
+  unitPrice Decimal @db.Decimal(12, 2)
+  defaultDurationMinutes Int @default(60)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  garage Garage @relation("GarageServices", fields: [garageId], references: [id], onDelete: Cascade)
+
+  @@unique([garageId, name])
+}
+
+/// Tabla Consumables (partes /repuestos)
+model Consumable {
+  id String @id @default(uuid())
+  garageId String
+  supplierReference String?
+  name String 
+  currentStock Int @default(0)
+  minimum_stock Int @default(0)
+  unitCost Decimal @db.Decimal(12, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  garage Garage @relation("GarageConsumables", fields: [garageId], references: [id], onDelete: Cascade)
+
+  @@unique([garageId, name])
+}
