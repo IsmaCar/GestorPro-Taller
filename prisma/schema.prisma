@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  OWNER
+  MANAGER
+  MECHANIC
+}
+
+model Garage {
+  id String @id @default(uuid())
+  name String
+  legalName String?
+  fiscalId String @unique
+  phone String?
+  street String?
+  city String?
+  postalCode String?
+  province String?
+  country String?
+  timezone String @default("Europe/Madrid")
+  currency String @default("EUR")
+  taxRate Decimal @default(21.00) @db.Decimal(5, 2)
+  invoiceNextNumber BigInt @default(1)
+  isActive Boolean @default(true)
+  contactInfo Json @default("{}")
+  metadata Json @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt()
+
+  users User[] @relation("GarageUsers")
+  clients Client[] @relation("GarageClients")
+  vehicles Vehicle[] @relation("GarageVehicles")
+}
+
+model User {
+  id String @id @default(uuid())
+  garageId String
+  name String
+  email String
+  passwordHash String?
+  rol UserRole 
+  emailVerified Boolean @default(false)
+  invitationToken String?
+  invitationExpiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  garage Garage @relation("GarageUsers", fields: [garageId], references: [id], onDelete: Cascade)
+  @@unique([garageId, email])
+
+}
+
+model Client {
+  id String @id @default(uuid())
+  garageId String
+  name String
+  email String
+  phone String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  garage Garage @relation("GarageClients", fields: [garageId], references: [id], onDelete: Cascade)
+  @@unique([garageId, email])
+
+  vehicles Vehicle[] @relation("VehicleClients")
+}
+
+model Vehicle {
+  id String @id @default(uuid())
+  garageId String
+  clientId String 
+  licensePlate String 
+  brand String?
+  model String?
+  color String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  garage Garage @relation("GarageVehicles", fields: [garageId], references: [id], onDelete: Cascade)
+  client Client @relation("VehicleClients", fields: [clientId], references: [id], onDelete: Cascade)
+  @@unique([garageId, licensePlate]) 
+}
