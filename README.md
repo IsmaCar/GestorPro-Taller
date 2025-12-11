@@ -1,9 +1,9 @@
 # GestorPro-Taller
 
-Pequeño SaaS para la gestión de talleres mecánicos (proyecto personal / trainee).
+Pequeño SaaS para la gestión de talleres mecánicos (proyecto personal).
 
 Descripción corta
-- GestorPro-Taller es una aplicación pensada para pequeñas y medianas empresas de mantenimiento y reparación de vehículos. Permite a un gestor/propietario administrar su taller (tenant), gestionar usuarios (mecánicos, recepción), clientes, vehículos, órdenes de trabajo, consumibles e inventario, citas y facturación. Los clientes reciben notificaciones (email/SMS) cuando su vehículo está listo o para recordatorios de cita.
+- GestorPro-Taller es una aplicación pensada para pequeñas y medianas empresas de mantenimiento y reparación de vehículos. Permite a un gestor/propietario administrar su taller (tenant), gestionar usuarios (mecánicos, recepción), clientes, vehículos, órdenes de trabajo, consumibles e inventario, citas y facturación. Los clientes reciben notificaciones (email) cuando su vehículo está listo o para recordatorios de cita.
 
 Decisiones técnicas (estado inicial)
 - Arquitectura multi-tenant (shared-schema) con aislamiento por tenant (garage).
@@ -15,12 +15,11 @@ Decisiones técnicas (estado inicial)
 
 Qué hay en este repo (por ahora)
 - Diagrama ER (SVG) del modelo de dato (Este diagrama lo estoy actualizando con mejoras y lo subiré mejorado proximamente).
-  [![Diagrama ER - GestorPro-Taller](diagrams/DiagramaBD-thumb.png)](diagrams/DiagramaBD.svg)
-- SQL de ejemplo / snippets (en la carpeta `prisma/`).
+  [![Diagrama ER - GestorPro-Taller](diagrams/DiagramaBD.png)](diagrams/DiagramaBD.svg)
+- Migraciones SQL (Prisma).
 - Este README (visión general). Iré agregando migraciones, ejemplos de uso, políticas RLS y scripts a medida que avance el proyecto.
 
 Objetivos a medio plazo
-- Migraciones SQL (Prisma).
 - Políticas RLS y ejemplos de sesión para aislamiento de tenant.
 - Endpoints backend básicos (autenticación, CRUD de órdenes, agenda, facturación).
 - UI mínima para demo.
@@ -32,6 +31,6 @@ Convenciones y buenas prácticas
 - Validaciones en la app + checks/triggers en la BD para garantizar la integridad (p. ej. que `assigned_mechanic` pertenezca al mismo `garage`).
 
 Contacto / notas
-- Proyecto en desarrollo; documentaré decisiones design y migraciones según avance.
+- Proyecto en desarrollo; documentaré decisiones de diseño y migraciones según avance.
 - Si tienes sugerencias, abre un issue o contactame por correo.
 
