@@ -16,7 +16,7 @@ Decisiones técnicas (estado inicial)
 Qué hay en este repo (por ahora)
 - Diagrama ER (SVG) del modelo de dato (Este diagrama lo estoy actualizando con mejoras y lo subiré mejorado proximamente).
   <a href="diagrams/DiagramaBD.svg" target="_blank" rel="noopener noreferrer">
-  <img src="diagrams/DiagramaBD-thumb.png"
+  <img src="diagrams/DiagramaBD.png"
        alt="Diagrama ER - GestorPro-Taller"
        width="420"
        style="max-width:100%; height:auto; display:block;"/>
