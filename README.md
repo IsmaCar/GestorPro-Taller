@@ -14,7 +14,7 @@ Decisiones técnicas (estado inicial)
 - Numeración de facturas: `invoice_next_number` por garage (contador por tenant) y `invoice_number` formateado al crear facturas.
 
 Qué hay en este repo (por ahora)
-- Diagrama ER (SVG) del modelo de dato (Este diagrama lo estoy actualizando con mejoras y lo subiré actualizado proximamente).
+- Diagrama ER (SVG) del modelo de dato (Este diagrama lo estoy actualizando con mejoras y lo subiré mejorado proximamente).
   [![Diagrama ER - GestorPro-Taller](diagrams/DiagramaBD-thumb.png)](diagrams/DiagramaBD.svg)
 - SQL de ejemplo / snippets (en la carpeta `prisma/`).
 - Este README (visión general). Iré agregando migraciones, ejemplos de uso, políticas RLS y scripts a medida que avance el proyecto.
