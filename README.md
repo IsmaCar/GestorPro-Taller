@@ -16,13 +16,14 @@ Decisiones técnicas (estado inicial)
 Qué hay en este repo (por ahora)
 - Diagrama ER (SVG) del modelo de dato (Este diagrama lo estoy actualizando con mejoras y lo subiré mejorado proximamente).
   <a href="diagrams/DiagramaBD.svg" target="_blank" rel="noopener noreferrer">
+  <hr>
   <img src="diagrams/DiagramaBD.png"
        alt="Diagrama ER - GestorPro-Taller"
        width="420"
        style="max-width:100%; height:auto; display:block;"/>
   </a>
 - Migraciones SQL (Prisma).
-- Este README (visión general). Iré agregando migraciones, ejemplos de uso, políticas RLS y scripts a medida que avance el proyecto.
+- Este README. Iré agregando migraciones, ejemplos de uso, políticas RLS y scripts a medida que avance el proyecto.
 
 Objetivos a medio plazo
 - Políticas RLS y ejemplos de sesión para aislamiento de tenant.
