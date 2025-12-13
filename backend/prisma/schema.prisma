@@ -29,17 +29,29 @@ enum StateOrder {
 }
 
 /// Enumeración para las líneas de orden (WorkOrderItems)
-enum workItemType {
+enum WorkItemType {
   service
   part
 }
 
-enum stockMovementType {
+enum StockMovementType {
   in
   out
   adjust
 }
 
+enum AppointmentStatus {
+  scheduled
+  confirmed
+  cancelled
+  done
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  overdue
+}
 /// Tenant:Garage
 model Garage {
   id                String   @id @default(uuid())
@@ -62,14 +74,16 @@ model Garage {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt()
 
-  users         User[]          @relation("GarageUsers")
-  clients       Client[]        @relation("GarageClients")
-  vehicles      Vehicle[]       @relation("GarageVehicles")
-  orders        WorkOrders[]    @relation("GarageOrders")
-  services      Service[]       @relation("GarageServices")
-  consumables   Consumable[]    @relation("GarageConsumables")
-  workOrderItem WorkOrderItem[] @relation("GarageWorkOrderItems")
-  stockMovement StockMovement[] @relation("GarageStockMovements")
+  users          User[]          @relation("GarageUsers")
+  clients        Client[]        @relation("GarageClients")
+  vehicles       Vehicle[]       @relation("GarageVehicles")
+  orders         WorkOrders[]    @relation("GarageOrders")
+  services       Service[]       @relation("GarageServices")
+  consumables    Consumable[]    @relation("GarageConsumables")
+  workOrderItems WorkOrderItem[] @relation("GarageWorkOrderItems")
+  stockMovements StockMovement[] @relation("GarageStockMovements")
+  appointments   Appointment[]   @relation("GarageAppointments")
+  invoices Invoice[] @relation("GarageInvoices")
 }
 
 /// tabla Users
@@ -90,7 +104,8 @@ model User {
 
   ordersCreated  WorkOrders[]    @relation("OrdersCreatedBy")
   ordersAssigned WorkOrders[]    @relation("OrdersAssignedTo")
-  stockMovement  StockMovement[] @relation("UserMovements")
+  stockMovements StockMovement[] @relation("UserMovements")
+  appointments   Appointment[]   @relation("UserAppointments")
 
   @@unique([garageId, email])
 }
@@ -107,8 +122,10 @@ model Client {
 
   garage Garage @relation("GarageClients", fields: [garageId], references: [id], onDelete: Cascade)
 
-  vehicles Vehicle[]    @relation("VehicleClients")
-  orders   WorkOrders[] @relation("ClientOrders")
+  vehicles     Vehicle[]     @relation("VehicleClients")
+  orders       WorkOrders[]  @relation("ClientOrders")
+  appointments Appointment[] @relation("ClientAppointments")
+  invoices Invoice[] @relation("ClientInvoices")
 
   @@unique([garageId, email])
 }
@@ -128,7 +145,8 @@ model Vehicle {
   garage Garage @relation("GarageVehicles", fields: [garageId], references: [id], onDelete: Cascade)
   client Client @relation("VehicleClients", fields: [clientId], references: [id], onDelete: Cascade)
 
-  orders WorkOrders[] @relation("VehicleOrders")
+  orders       WorkOrders[]  @relation("VehicleOrders")
+  appointments Appointment[] @relation("VehicleAppointments")
 
   @@unique([garageId, licensePlate])
 }
@@ -149,7 +167,7 @@ model WorkOrders {
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
-  workOrderItem WorkOrderItem[] @relation("OrderItems")
+  workOrderItems WorkOrderItem[] @relation("OrderItems")
 
   garage        Garage  @relation("GarageOrders", fields: [garageId], references: [id], onDelete: Cascade)
   vehicle       Vehicle @relation("VehicleOrders", fields: [vehicleId], references: [id], onDelete: Cascade)
@@ -172,7 +190,7 @@ model Service {
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
-  workOrderItem WorkOrderItem[] @relation("ServiceOrderItems")
+  workOrderItems WorkOrderItem[] @relation("ServiceOrderItems")
 
   garage Garage @relation("GarageServices", fields: [garageId], references: [id], onDelete: Cascade)
 
@@ -191,8 +209,8 @@ model Consumable {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  workOrderItem WorkOrderItem[] @relation("ConsumableOrderItems")
-  stockMovement StockMovement[] @relation("ConsumableMovements")
+  workOrderItems WorkOrderItem[] @relation("ConsumableOrderItems")
+  stockMovements StockMovement[] @relation("ConsumableMovements")
 
   garage Garage @relation("GarageConsumables", fields: [garageId], references: [id], onDelete: Cascade)
 
@@ -206,14 +224,15 @@ model WorkOrderItem {
   workOrderId     String
   serviceId       String?
   consumableId    String?
-  itemType        workItemType
+  itemType        WorkItemType
   quantity        Decimal      @db.Decimal(12, 2)
   unitPriceAtTime Decimal      @db.Decimal(12, 2)
   notes           String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
-  stockMovement StockMovement[] @relation("OrderItemMovements")
+  stockMovements StockMovement[] @relation("OrderItemMovements")
+  invoicesLines InvoiceLines[] @relation("OrderItemInvoicesLines")
 
   garage     Garage      @relation("GarageWorkOrderItems", fields: [garageId], references: [id], onDelete: Cascade)
   workOrder  WorkOrders  @relation("OrderItems", fields: [workOrderId], references: [id], onDelete: Cascade)
@@ -227,13 +246,64 @@ model StockMovement {
   workOrderItemId String?
   createdBy       String
   consumableId    String
-  movementType    stockMovementType
+  movementType    StockMovementType
   quantity        Int
   reference       String? // libre (orden de compra, proveedor, etc)
   createdAt       DateTime          @default(now())
 
-  garage             Garage         @relation("GarageStockMovements", fields: [garageId], references: [id], onDelete: Cascade)
-  workOrderItem      WorkOrderItem? @relation("OrderItemMovements", fields: [workOrderItemId], references: [id], onDelete: Restrict)
-  userMovement       User           @relation("UserMovements", fields: [createdBy], references: [id], onDelete: Restrict)
-  consumableMovement Consumable     @relation("ConsumableMovements", fields: [consumableId], references: [id], onDelete: Restrict)
+  garage        Garage         @relation("GarageStockMovements", fields: [garageId], references: [id], onDelete: Cascade)
+  workOrderItem WorkOrderItem? @relation("OrderItemMovements", fields: [workOrderItemId], references: [id], onDelete: Restrict)
+  createdByUser User           @relation("UserMovements", fields: [createdBy], references: [id], onDelete: Restrict)
+  consumable    Consumable     @relation("ConsumableMovements", fields: [consumableId], references: [id], onDelete: Restrict)
+}
+
+model Appointment {
+  id         String            @id @default(uuid())
+  garageId   String
+  vehicleId  String
+  clientId   String
+  mechanicId String?
+  startAt    DateTime
+  endAt      DateTime?
+  status     AppointmentStatus @default(scheduled)
+  notes      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  garage   Garage  @relation("GarageAppointments", fields: [garageId], references: [id], onDelete: Cascade)
+  vehicle  Vehicle @relation("VehicleAppointments", fields: [vehicleId], references: [id], onDelete: Restrict)
+  client   Client  @relation("ClientAppointments", fields: [clientId], references: [id], onDelete: Restrict)
+  mechanic User?   @relation("UserAppointments", fields: [mechanicId], references: [id], onDelete: Restrict)
+}
+
+model Invoice {
+  id String @id @default(uuid())
+  garageId String
+  clientId String
+  invoiceNumber String
+  totalAmount Decimal @db.Decimal(12, 2) @default(0)
+  paymentStatus PaymentStatus
+  issuedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoiceLines InvoiceLines[] @relation("InvoicesLines")
+
+  garage Garage @relation("GarageInvoices", fields: [garageId], references: [id], onDelete: Cascade)
+  client Client @relation("ClientInvoices", fields: [clientId], references: [id], onDelete: Restrict)
+
+  @@unique([garageId, invoiceNumber])
+}
+
+model InvoiceLines {
+  id String @id  @default(uuid())
+  invoiceId String
+  description String
+  quantity Int  @default(1)
+  unitPrice Decimal @db.Decimal(12, 2)
+  workOrderItemId String?
+  createdAt DateTime @default(now())
+
+  invoice Invoice @relation("InvoicesLines", fields: [invoiceId], references: [id], onDelete: Cascade)
+  workOrderItem WorkOrderItem? @relation("OrderItemInvoicesLines", fields: [workOrderItemId], references: [id], onDelete: Restrict)
 }
