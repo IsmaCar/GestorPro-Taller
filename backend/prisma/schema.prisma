@@ -56,8 +56,6 @@ enum PaymentStatus {
 enum NotificationChannel {
   email
   // sms y push comentados temporalmente
-  // Se habilitarán en fase 2 cuando se implementen los proveedores
-  // (Twilio para SMS, Firebase para Push)
   // sms
   // push
 }
@@ -89,9 +87,9 @@ model Garage {
   metadata          Json     @default("{}")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt()
-// adminUserId puede ser NULL durante el proceso de onboarding
-// Permite crear el garage primero, luego el primer usuario,
-// y finalmente establecer la relación admin sin dependencias circulares
+  // adminUserId puede ser NULL durante el proceso de onboarding
+  // Permite crear el garage primero, luego el primer usuario,
+  // y finalmente establecer la relación admin sin dependencias circulares
   adminUserId       String?
 
   adminUser User? @relation("GarageAdmin", fields: [adminUserId], references: [id], onDelete: SetNull)
@@ -129,10 +127,10 @@ model User {
   ordersAssigned WorkOrders[]    @relation("OrdersAssignedTo")
   stockMovements StockMovement[] @relation("UserMovements")
   appointments   Appointment[]   @relation("UserAppointments")
-  
+
   // garagesOwned permite que un usuario sea admin de múltiples garages
   // Casos de uso: franquicias, consultores, testing con múltiples tenants
-  garagesOwned   Garage[]        @relation("GarageAdmin")
+  garagesOwned Garage[] @relation("GarageAdmin")
 
   @@unique([garageId, email])
 }
@@ -205,7 +203,7 @@ model WorkOrders {
   // Nota: La consistencia multi-tenant (vehicle.garageId = workOrder.garageId
   // y assignedMechanic.garageId = workOrder.garageId) se garantiza mediante:
   // 1. Validación en la capa de servicio (verificar pertenencia al tenant)
-  // 2. Opcionalmente con Row Level Security (RLS) en PostgreSQL (fase futura)
+  // 2. Row Level Security (RLS) en PostgreSQL (implementación más adelante)
   // 3. Filtrado manual en queries: WHERE garageId = user.garageId
 }
 
@@ -249,10 +247,10 @@ model Consumable {
 
 /// Tabla WorkOrderItems (líneas de orden: servicio o parte)
 model WorkOrderItem {
-  id              String       @id @default(uuid())
-  garageId        String
-  workOrderId     String
-  
+  id          String @id @default(uuid())
+  garageId    String
+  workOrderId String
+
   // serviceId y consumableId son mutuamente excluyentes según itemType
   // Validación de negocio:
   // - Si itemType='service' → serviceId NOT NULL, consumableId NULL
@@ -279,9 +277,9 @@ model WorkOrderItem {
 
 /// Tabla StockMovement (Movimientos de stock de un taller)
 model StockMovement {
-  id              String            @id @default(uuid())
-  garageId        String
-  
+  id       String @id @default(uuid())
+  garageId String
+
   // workOrderItemId es opcional porque los movimientos de stock
   // pueden ocurrir sin estar ligados a una orden de trabajo:
   // - Compras directas de inventario
@@ -303,10 +301,9 @@ model StockMovement {
 
 /// Tabla Appointment (Citas de un taller)
 model Appointment {
-  id         String            @id @default(uuid())
-  garageId   String
-  
-  // vehicleId y clientId son obligatorios (a diferencia del SQL original)
+  id       String @id @default(uuid())
+  garageId String
+
   // Decisión de diseño: una cita SIN vehículo y cliente no tiene sentido
   // para el flujo de negocio, mejora integridad de datos y simplifica queries
   vehicleId  String
@@ -361,9 +358,9 @@ model InvoiceLines {
 
 /// Tabla NotificationHistory (Notificaciones al cliente)
 model NotificationHistory {
-  id          String              @id @default(uuid())
-  garageId    String
-  
+  id       String @id @default(uuid())
+  garageId String
+
   // Relación polimórfica: permite que una notificación se asocie
   // con diferentes tipos de entidades (WorkOrder, Appointment, Invoice)
   // sin crear múltiples FKs específicas.
@@ -372,15 +369,15 @@ model NotificationHistory {
   // La resolución de la relación se hace manualmente en la capa de aplicación
   relatedType String
   relatedId   String?
-  
-  channel     NotificationChannel
-  recipient   String
-  payload     Json?
-  status      NotificationStatus  @default(pending)
-  attempts    Int                 @default(0)
-  lastError   String?
-  sentAt      DateTime?
-  createdAt   DateTime            @default(now())
+
+  channel   NotificationChannel
+  recipient String
+  payload   Json?
+  status    NotificationStatus  @default(pending)
+  attempts  Int                 @default(0)
+  lastError String?
+  sentAt    DateTime?
+  createdAt DateTime            @default(now())
 
   garage Garage @relation("GarageNotifications", fields: [garageId], references: [id], onDelete: Cascade)
 
