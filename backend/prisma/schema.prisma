@@ -22,10 +22,10 @@ enum UserRole {
 
 /// Enumeración para estado de ordenes de trabajo
 enum StateOrder {
-  open
-  inProgress
-  done
-  cancelled
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
 }
 
 /// Enumeración para las líneas de orden (WorkOrderItems)
@@ -52,6 +52,20 @@ enum PaymentStatus {
   paid
   overdue
 }
+
+enum NotificationChannel {
+  email
+  // sms y push comentados temporalmente
+  // sms
+  // push
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  failed
+}
+
 /// Tenant:Garage
 model Garage {
   id                String   @id @default(uuid())
@@ -73,20 +87,27 @@ model Garage {
   metadata          Json     @default("{}")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt()
+  // adminUserId puede ser NULL durante el proceso de onboarding
+  // Permite crear el garage primero, luego el primer usuario,
+  // y finalmente establecer la relación admin sin dependencias circulares
+  adminUserId       String?
 
-  users          User[]          @relation("GarageUsers")
-  clients        Client[]        @relation("GarageClients")
-  vehicles       Vehicle[]       @relation("GarageVehicles")
-  orders         WorkOrders[]    @relation("GarageOrders")
-  services       Service[]       @relation("GarageServices")
-  consumables    Consumable[]    @relation("GarageConsumables")
-  workOrderItems WorkOrderItem[] @relation("GarageWorkOrderItems")
-  stockMovements StockMovement[] @relation("GarageStockMovements")
-  appointments   Appointment[]   @relation("GarageAppointments")
-  invoices Invoice[] @relation("GarageInvoices")
+  adminUser User? @relation("GarageAdmin", fields: [adminUserId], references: [id], onDelete: SetNull)
+
+  users          User[]                @relation("GarageUsers")
+  clients        Client[]              @relation("GarageClients")
+  vehicles       Vehicle[]             @relation("GarageVehicles")
+  orders         WorkOrders[]          @relation("GarageOrders")
+  services       Service[]             @relation("GarageServices")
+  consumables    Consumable[]          @relation("GarageConsumables")
+  workOrderItems WorkOrderItem[]       @relation("GarageWorkOrderItems")
+  stockMovements StockMovement[]       @relation("GarageStockMovements")
+  appointments   Appointment[]         @relation("GarageAppointments")
+  invoices       Invoice[]             @relation("GarageInvoices")
+  notifications  NotificationHistory[] @relation("GarageNotifications")
 }
 
-/// tabla Users
+/// tabla Users (Dueño, Gestor, mecánicos)
 model User {
   id                  String    @id @default(uuid())
   garageId            String
@@ -107,6 +128,10 @@ model User {
   stockMovements StockMovement[] @relation("UserMovements")
   appointments   Appointment[]   @relation("UserAppointments")
 
+  // garagesOwned permite que un usuario sea admin de múltiples garages
+  // Casos de uso: franquicias, consultores, testing con múltiples tenants
+  garagesOwned Garage[] @relation("GarageAdmin")
+
   @@unique([garageId, email])
 }
 
@@ -125,7 +150,7 @@ model Client {
   vehicles     Vehicle[]     @relation("VehicleClients")
   orders       WorkOrders[]  @relation("ClientOrders")
   appointments Appointment[] @relation("ClientAppointments")
-  invoices Invoice[] @relation("ClientInvoices")
+  invoices     Invoice[]     @relation("ClientInvoices")
 
   @@unique([garageId, email])
 }
@@ -151,7 +176,7 @@ model Vehicle {
   @@unique([garageId, licensePlate])
 }
 
-/// Tabla Work Orders
+/// Tabla Work Orders (Ordenes de trabajo de un taller)
 model WorkOrders {
   id               String     @id @default(uuid())
   garageId         String
@@ -162,7 +187,7 @@ model WorkOrders {
   description      String
   openingDate      DateTime   @default(now())
   closingDate      DateTime?
-  state            StateOrder @default(open)
+  state            StateOrder @default(OPEN)
   totalAmount      Decimal    @default(0) @db.Decimal(12, 2)
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
@@ -175,8 +200,11 @@ model WorkOrders {
   orderCreated  User?   @relation("OrdersCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
   orderAssigned User?   @relation("OrdersAssignedTo", fields: [assignedMechanic], references: [id], onDelete: SetNull)
 
-  //nota: es responsabilidad de la aplicación / RLS / triggers garantizar que
-  //vehicle.garage_id = work_orders.garage_id y assigned_mechanic.garage_id = work_orders.garage_id
+  // Nota: La consistencia multi-tenant (vehicle.garageId = workOrder.garageId
+  // y assignedMechanic.garageId = workOrder.garageId) se garantiza mediante:
+  // 1. Validación en la capa de servicio (verificar pertenencia al tenant)
+  // 2. Row Level Security (RLS) en PostgreSQL (implementación más adelante)
+  // 3. Filtrado manual en queries: WHERE garageId = user.garageId
 }
 
 /// Tabla Services (catálogo de servicios por tenant:garage)
@@ -219,9 +247,16 @@ model Consumable {
 
 /// Tabla WorkOrderItems (líneas de orden: servicio o parte)
 model WorkOrderItem {
-  id              String       @id @default(uuid())
-  garageId        String
-  workOrderId     String
+  id          String @id @default(uuid())
+  garageId    String
+  workOrderId String
+
+  // serviceId y consumableId son mutuamente excluyentes según itemType
+  // Validación de negocio:
+  // - Si itemType='service' → serviceId NOT NULL, consumableId NULL
+  // - Si itemType='part' → consumableId NOT NULL, serviceId NULL
+  // Esta lógica se implementa en la capa de servicio (DTOs + validación),
+  // no mediante CHECK constraints de DB para mayor flexibilidad
   serviceId       String?
   consumableId    String?
   itemType        WorkItemType
@@ -232,7 +267,7 @@ model WorkOrderItem {
   updatedAt       DateTime     @updatedAt
 
   stockMovements StockMovement[] @relation("OrderItemMovements")
-  invoicesLines InvoiceLines[] @relation("OrderItemInvoicesLines")
+  invoicesLines  InvoiceLines[]  @relation("OrderItemInvoicesLines")
 
   garage     Garage      @relation("GarageWorkOrderItems", fields: [garageId], references: [id], onDelete: Cascade)
   workOrder  WorkOrders  @relation("OrderItems", fields: [workOrderId], references: [id], onDelete: Cascade)
@@ -240,9 +275,16 @@ model WorkOrderItem {
   consumable Consumable? @relation("ConsumableOrderItems", fields: [consumableId], references: [id], onDelete: Restrict)
 }
 
+/// Tabla StockMovement (Movimientos de stock de un taller)
 model StockMovement {
-  id              String            @id @default(uuid())
-  garageId        String
+  id       String @id @default(uuid())
+  garageId String
+
+  // workOrderItemId es opcional porque los movimientos de stock
+  // pueden ocurrir sin estar ligados a una orden de trabajo:
+  // - Compras directas de inventario
+  // - Ajustes de inventario por conteo físico
+  // - Devoluciones a proveedores
   workOrderItemId String?
   createdBy       String
   consumableId    String
@@ -257,9 +299,13 @@ model StockMovement {
   consumable    Consumable     @relation("ConsumableMovements", fields: [consumableId], references: [id], onDelete: Restrict)
 }
 
+/// Tabla Appointment (Citas de un taller)
 model Appointment {
-  id         String            @id @default(uuid())
-  garageId   String
+  id       String @id @default(uuid())
+  garageId String
+
+  // Decisión de diseño: una cita SIN vehículo y cliente no tiene sentido
+  // para el flujo de negocio, mejora integridad de datos y simplifica queries
   vehicleId  String
   clientId   String
   mechanicId String?
@@ -276,16 +322,17 @@ model Appointment {
   mechanic User?   @relation("UserAppointments", fields: [mechanicId], references: [id], onDelete: Restrict)
 }
 
+/// Tabla Invoice (Facturas de un taller)
 model Invoice {
-  id String @id @default(uuid())
-  garageId String
-  clientId String
+  id            String        @id @default(uuid())
+  garageId      String
+  clientId      String
   invoiceNumber String
-  totalAmount Decimal @db.Decimal(12, 2) @default(0)
-  paymentStatus PaymentStatus
-  issuedAt DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  totalAmount   Decimal       @default(0) @db.Decimal(12, 2)
+  paymentStatus PaymentStatus @default(pending)
+  issuedAt      DateTime      @default(now())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   invoiceLines InvoiceLines[] @relation("InvoicesLines")
 
@@ -295,15 +342,46 @@ model Invoice {
   @@unique([garageId, invoiceNumber])
 }
 
+/// Tabla InvoiceLines (Lineas individuales de un factura, cada servicio, pieza o concepto a cobrar)
 model InvoiceLines {
-  id String @id  @default(uuid())
-  invoiceId String
-  description String
-  quantity Int  @default(1)
-  unitPrice Decimal @db.Decimal(12, 2)
+  id              String   @id @default(uuid())
+  invoiceId       String
+  description     String
+  quantity        Int      @default(1)
+  unitPrice       Decimal  @db.Decimal(12, 2)
   workOrderItemId String?
-  createdAt DateTime @default(now())
+  createdAt       DateTime @default(now())
 
-  invoice Invoice @relation("InvoicesLines", fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice       Invoice        @relation("InvoicesLines", fields: [invoiceId], references: [id], onDelete: Cascade)
   workOrderItem WorkOrderItem? @relation("OrderItemInvoicesLines", fields: [workOrderItemId], references: [id], onDelete: Restrict)
+}
+
+/// Tabla NotificationHistory (Notificaciones al cliente)
+model NotificationHistory {
+  id       String @id @default(uuid())
+  garageId String
+
+  // Relación polimórfica: permite que una notificación se asocie
+  // con diferentes tipos de entidades (WorkOrder, Appointment, Invoice)
+  // sin crear múltiples FKs específicas.
+  // relatedType indica el tipo de entidad ('work_order', 'appointment', 'invoice')
+  // relatedId almacena el UUID de la entidad específica
+  // La resolución de la relación se hace manualmente en la capa de aplicación
+  relatedType String
+  relatedId   String?
+
+  channel   NotificationChannel
+  recipient String
+  payload   Json?
+  status    NotificationStatus  @default(pending)
+  attempts  Int                 @default(0)
+  lastError String?
+  sentAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  garage Garage @relation("GarageNotifications", fields: [garageId], references: [id], onDelete: Cascade)
+
+  // Índice compuesto para optimizar queries frecuentes que filtran
+  // notificaciones por garage y tipo de entidad relacionada
+  @@index([garageId, relatedType, relatedId])
 }
