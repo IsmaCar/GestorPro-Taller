@@ -56,3 +56,8 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /generated/prisma
+
+# Postman secrets
+.postman/
+postman/**/*.secret.json
+postman/**/secrets/

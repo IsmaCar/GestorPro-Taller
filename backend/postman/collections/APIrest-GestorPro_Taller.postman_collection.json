@@ -1,0 +1,372 @@
+{
+  "info": {
+    "_postman_id": "3caf1b3f-badd-472e-80a4-2e8a1186d051",
+    "name": "APIrest-GestorPro_Taller",
+    "description": "Esta colección documenta la API **RESTful** de **GestorPro-Taller**, una aplicación **SaaS Multi-Tenant** para la gestión integral de talleres mecánicos.\n\nLa arquitectura sigue el principio de **Separación de Responsabilidades** (SoR) y **Aislamiento de Datos por Taller**. Los endpoints están agrupados por vistas funcionales (**Mecánico**, **Gestor**, **Administrador**) y asegurados mediante **Middleware de Roles** para garantizar que cada usuario solo acceda a los recursos definidos para su rol.\n\n### Puntos Clave:\n\n- **Aislamiento Multi-Tenant:** Todos los recursos están filtrados por `garage_id`.\n    \n- **Flujo de Trabajo:** Cubre el ciclo completo de servicio: Recepción → Ejecución → Facturación.\n    \n- **Integridad Financiera:** Garantiza la **inmutabilidad** de precios y la **trazabilidad** de stock mediante transacciones atómicas.\n    \n- **Roles:** Los permisos se aplican vía _Authorization Header_, no por la URL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth Area",
+      "item": [
+        {
+          "name": "/api/auth/register-tenant",
+          "id": "1a57a0d0-4ef6-4cf1-8c79-119f95572112",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "## Descripción\n\nCrear el Taller y el user (dueño) en una sola transicción"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/auth/login",
+          "id": "eecc5a86-75c1-4e26-8956-60e8d4cc0e7f",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "## Descripción\n\nRecibe el email y la contraseña. Devuelve JWT Token con el rol y el garage_id"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/auth/password/reset",
+          "id": "41350f7c-441e-4a28-8a89-40e39fcc1856",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "## Descripción\n\nSolicita el cambio de contraseña (envía un email)"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/admin/users",
+          "id": "cb06b5e7-1c0e-4ab6-b959-cd8a527ca094",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "## Descripción\n\nCrea un usuario (Mecánico/Gestor) directamente en la base de datos"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/auth/setup-account",
+          "id": "08033ec6-f2ad-4a2e-aed8-104d2619bf5a",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "## Descripción\n\nEste endpoint sirve para que el usuario que registra el dueño pueda crear una contraseña para sus futuros logins dentro de la empresa. No necesita que un usuario no esté logueado sino un Token de invitación para validar"
+          },
+          "response": []
+        }
+      ],
+      "id": "8d899099-f2cd-48b7-8854-f9fe92cb7942",
+      "description": "# Reglas de Acceso: Módulo de Autenticación y Onboarding\n\nEste módulo gestiona el acceso al sistema, incluyendo el registro inicial del taller (Tenant), la gestión de sesión y el flujo de invitación de empleados. Es el primer punto de defensa de la API.\n\n## Flujo de Trabajo y Permisos\n\n| Rol | Acción | Endpoints Usados | Lógica de Estado |\n| --- | --- | --- | --- |\n| **PÚBLICO** | Registro del Taller (Tenant) | `POST /register-tenant` | Crea la empresa y al Dueño con rol 'DUEÑO'. Valida el CIF. |\n| **PÚBLICO** | Activación del Empleado | `POST /auth/setup-account` | Consume el token de invitación para que el usuario configure su contraseña. Cambia el estado a **ACTIVE**. |\n| **TODOS** | Login de Sesión | `POST /auth/login` | Otorga el JWT Token. Solo permite el acceso si el `Users.status` es **ACTIVE**. |\n| **DUEÑO** | Invitación de Empleados | `POST /admin/users` | Crea al empleado con `Users.status = 'PENDING'` y genera el token de invitación. |\n\n---\n\n### **Punto Crítico: El Estado del Usuario**\n\nLa tabla `Users` requiere el campo **`status`** **(****`PENDING`****,** **`ACTIVE`****,** **`INACTIVE`****)**. Cualquier intento de login de un usuario con `status != ACTIVE` es automáticamente rechazado, asegurando que un empleado despedido (`INACTIVE`) o un invitado que aún no ha activado su cuenta (`PENDING`) no puedan acceder al sistema."
+    },
+    {
+      "name": "Execution Area",
+      "item": [
+        {
+          "name": "/api/me/tasks",
+          "id": "e6c2789b-f75c-46ba-9e41-d38cb10059c8",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "## Descripción\n\n**Endpoint Especial.** No lista todas las órdenes. El backend extrae el ID del mecánico del Token y hace: `SELECT \\\\\\* FROM WorkOrders WHERE assigned_mechanic_id = [MI_ID] AND state != 'FACTURADA'`.\n\n#### Parámetros de Ruta\n\n\\- \\`id\\` (integer): El identificador único del usuario."
+          },
+          "response": []
+        },
+        {
+          "name": "/api/work-orders/:id",
+          "id": "60b54549-535a-4701-b002-3a32573a48f9",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "## Descripción\n\nVer detalle de una Operación de trabajo. **Check de Seguridad:** Solo si `assigned_mechanic_id == MI_ID`."
+          },
+          "response": []
+        },
+        {
+          "name": "/api/inventory/search",
+          "id": "437ef6b0-2f24-4eda-8d21-ccf292f1242e",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "## Descripción\n\nEl mecánico podrá buscar consumibles para añadirlas a la orden(Solo lectura)"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/work-orders/:id/items",
+          "id": "66a80351-a195-4516-8348-c383502d01ef",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "## Descripción\n\nAñade líneas a la Orden de trabajo. El backend verifica stock."
+          },
+          "response": []
+        },
+        {
+          "name": "/api/work-orders/:id/status",
+          "id": "60b4da45-33ce-4d68-8d25-71580554f469",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "description": "## Descripción\n\nStartFragmentCambiar estado. Solo permite transiciones lógicas: `PENDIENTE` -> `EN_CURSO` -> `FINALIZADA`. **No puede pasar a** **`FACTURADA.`**"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/work-orders/:id/items/:itemId",
+          "id": "5aa4bf55-6c2c-4695-8e22-379140bf8564",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "description": "## Descripción\n\nBorra la línea en la Orden de trabajo."
+          },
+          "response": []
+        }
+      ],
+      "id": "1ebf70c8-b541-4eb7-bd63-7f165b7a600e",
+      "description": "# Reglas de Acceso: Área de Ejecución (Mecánico)\n\nEste módulo agrupa los endpoints operativos diseñados para la ejecución diaria del trabajo. Está optimizado para la eficiencia: el mecánico solo ve y toca lo que tiene asignado.\n\n## Flujo de Trabajo y Permisos\n\n| Acción | Permiso del Mecánico | Lógica de Negocio / Restricción |\n| --- | --- | --- |\n| **Visualizar Órdenes** | ✅ Parcial | Solo puede ver las Órdenes de Trabajo donde `assigned_mechanic_id` coincide con su ID. |\n| **Crear Órdenes** | ❌ No | El mecánico recibe trabajo, no lo crea. |\n| **Añadir Materiales** | ✅ Sí | Puede buscar y añadir consumibles (`POST /items`) a sus órdenes activas. |\n| **Cambiar Estado** | ⚠️ Restringido | Puede avanzar de `PENDIENTE` → `EN_CURSO` → `FINALIZADA`. **Nunca** puede pasar a `FACTURADA`. |\n| **Ver Precios/Facturas** | ❌ No | El área financiera está oculta para este rol. |\n\n---\n\n**Nota Técnica:**  \nEl endpoint de búsqueda de inventario (`GET /inventory/search`) en esta vista es de **Solo Lectura** y sirve para localizar los IDs de los consumibles antes de añadirlos a la orden."
+    },
+    {
+      "name": "Administration Area",
+      "item": [
+        {
+          "name": "/api/admin/report/revenue",
+          "id": "54ef23bc-392a-4ec6-8908-5936f53148e1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "## Descripción\n\nVer cuánto se ha ganado este mes."
+          },
+          "response": []
+        },
+        {
+          "name": "/api/admin/report/stock",
+          "id": "a3184144-c835-4902-8e55-088638c207d5",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "## Descripción\n\nVer qué consumibles están bajo mínimos."
+          },
+          "response": []
+        },
+        {
+          "name": "/api/admin/users",
+          "id": "4603c825-b708-4938-9f6a-cc0bedea77f1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "## Descripción\n\nLista todos los empleados del taller"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/admin/settings",
+          "id": "68f48ba6-e69f-4812-81af-8219221d4219",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "## Descripción\n\nObtener datos de configuración global del `Garage` (Datos Fiscales, logo, límites, etc)"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/admin/users",
+          "id": "6a75dfe8-a542-4071-9a05-c933b1598316",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "## Descripción\n\nCrear nuevo mecánico (Contratar)."
+          },
+          "response": []
+        },
+        {
+          "name": "/api/admin/users/:id",
+          "id": "7494313c-1365-4fb7-bb1e-ba08054d2e79",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "description": "## Descripción\n\nAsignar roles (`MECANICO` a `GESTOR`) o actualizar datos de empleados"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/admin/settings",
+          "id": "d8ffb5c0-a88c-49ce-9bf4-0efb77d5ded6",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "description": "## Descripción\n\nConfiguración Global/DatosFiscales (Actualizar CIF, dirección fiscal, o ajustar tarifas base)"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/admin/users/:id",
+          "id": "6b3bfde6-9c1f-4594-bf57-3a74d93781e1",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "description": "## Descripción\n\nDar de baja a un empleado. En sistemas reales, esto debería ser un soft _delete (__\\`__is_active = FALSE_\\`_)_"
+          },
+          "response": []
+        }
+      ],
+      "id": "2f385dca-2e2d-4778-8255-fc61c813a7ef",
+      "description": "# Reglas de Acceso: Área de Administración (Dueño)\n\nEste módulo contiene los recursos exclusivos para la gestión del negocio, recursos humanos y auditoría financiera. Estas rutas están prefijadas con `/api/admin`.\n\n## Flujo de Trabajo y Permisos\n\n| Acción | Permiso del Dueño | Lógica de Negocio / Restricción |\n| --- | --- | --- |\n| **Gestión de Usuarios** | ✅ Exclusivo | Único rol capaz de crear nuevos usuarios (`Users`), asignar roles y dar de baja empleados. |\n| **Reportes Financieros** | ✅ Exclusivo | Acceso a endpoints de `Revenue`. |\n| **Configuración SaaS** | ✅ Exclusivo | Datos fiscales de la empresa (`Garages`) y configuración global. |\n| **Auditoría Global** | ✅ Total | Puede ver y revertir acciones de Gestores y Mecánicos si es necesario. |\n\n---\n\n**Nota Técnica:**  \nTodos los endpoints en esta carpeta requieren estrictamente el rol `OWNER`. Cualquier intento de acceso por parte de un `GESTOR` o `MECANICO` devolverá `403 Forbidden`."
+    },
+    {
+      "name": "Workflow Area",
+      "item": [
+        {
+          "name": "/api/work-orders",
+          "id": "f0ba5869-1ef8-4733-aeff-a3cb3c07526d",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "## Descripción\n\nVer todas las órdenes del taller (Filtrar por mecánico, fecha, estado)"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/work-orders",
+          "id": "4fc9b734-f46d-4c36-88e4-9314fff9fc90",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "## Descripción\n\nRecepcionar un vehículo (Aquí asigna al mecánico)"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/clients",
+          "id": "99debc31-ae16-4307-96d0-a703ab2c3bfe",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "## Descripción\n\nRegistrar nuevo cliente"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/vehicles",
+          "id": "86ab58b2-9884-4d7f-89a0-1ae4a1f4e5e7",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "## Descripción\n\nRegistrar vehículo entrante"
+          },
+          "response": []
+        }
+      ],
+      "id": "36121f3b-fda7-490e-8a51-b2f2d08b9436",
+      "description": "# Reglas de Acceso: Área de Operaciones (Gestor)\n\nEste módulo es la \"Torre de Control\" del taller. Gestiona la entrada de trabajo, la logística de inventario y el cierre de las operaciones (facturación).\n\n## Flujo de Trabajo y Permisos\n\n| Acción | Permiso del Gestor | Lógica de Negocio / Restricción |\n| --- | --- | --- |\n| **Gestión de Órdenes** | ✅ Total | Puede crear órdenes, asignar cualquier mecánico y ver todas las tareas del taller. |\n| **Gestión de Entidades** | ✅ Total | Puede crear y editar Clientes (`Clients`) y Vehículos (`Vehicles`). |\n| **Inventario** | ✅ Total | Puede dar de alta nuevas referencias (`Consumibles`) y ajustar stock manual. |\n| **Facturación** | ✅ Sí | Es el único rol (junto al Dueño) que puede generar una factura (`POST /invoices`) a partir de una OT `FINALIZADA`. |\n| **Edición de Ítems** | ✅ Sí | Puede eliminar o corregir líneas de material (`DELETE /items`) que el mecánico haya introducido por error antes de facturar. |\n\n---\n\n**Nota Técnica:**  \nLos endpoints de esta carpeta tienen acceso a datos sensibles de clientes. El Gestor tiene permiso implícito para ver el estado global del taller, pero **no** los reportes de ganancias netas (reservado al Admin)."
+    },
+    {
+      "name": "Logistics_management Area",
+      "item": [
+        {
+          "name": "/api/inventory/consumables",
+          "id": "bb45e836-e2d6-42f6-905a-7e3bfc966322",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "## Descripción\n\nDar de alta una nueva referencia (Compras a proveedores)"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/inventory/services",
+          "id": "4776e71f-cf48-47c8-8b34-7eb1ef5fc8f2",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "## Descripción\n\nCrear/Actualizar precios de mano de obra"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/inventory/consumables/:id",
+          "id": "5e2d6289-d901-408b-9439-de2ab1d8d349",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "description": "## Descripción\n\nAjuste manual de stock (Corrección de inventario)"
+          },
+          "response": []
+        }
+      ],
+      "id": "1ddeae66-93d1-4dae-a072-d5a3875470a2",
+      "description": "# Reglas de Acceso: Módulo de Logística (Stock y Catálogo)\n\nEste módulo controla dos aspectos fundamentales: el **Catálogo** (Lista de Servicios y Consumibles con sus precios) y el **Stock Físico** (Cantidades reales en el almacén).\n\n## Flujo de Trabajo y Permisos\n\n| Acción | Rol: Mecánico | Rol: Dueño/Gestor | Lógica de Negocio |\n| --- | --- | --- | --- |\n| **Consultar Catálogo** | ✅ Lectura (Búsqueda) | ✅ Lectura Total | Ambos necesitan buscar piezas para trabajar o gestionar. |\n| **Crear/Editar Productos** | ❌ No | ✅ Sí | Solo los gestores definen nuevos servicios o referencias de proveedores. |\n| **Ajuste Manual de Stock** | ❌ No | ✅ Sí | Correcciones de inventario (ej. roturas, conteo anual) solo por administración. |\n| **Descuento de Stock** | ✅ Automático | ✅ Automático | El stock se descuenta automáticamente cuando se consume un ítem en una Orden de Trabajo. |\n| **Cambio de Precios** | ❌ No | ✅ Sí | El cambio de precio en el catálogo **NO** afecta a las facturas ya generadas (Inmutabilidad). |\n\n---\n\n**Nota Técnica:**\n\n- **Búsqueda (****`GET /search`****):** Este endpoint es público para todos los empleados del taller para facilitar la operativa.\n    \n- **Alertas:** Los endpoints de reporte de \"Stock Bajo\" son exclusivos del perfil Gestor/Dueño."
+    },
+    {
+      "name": "Billing Area",
+      "item": [
+        {
+          "name": "/api/invoices",
+          "id": "9a3f526d-b976-4779-a019-cf977b0f24cf",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "## Descripción\n\nStartFragmentLista **todas las facturas** del taller. Incluye montos totales y el estado de pago. Se usa para la vista de \"Caja / Cuentas por Cobrar\"EndFragment"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/invoices/:id",
+          "id": "b9e19386-d2db-4379-a8c1-71260d2bbab2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "## Descripción\n\nVer el detalle de una factura específica. Muestra los `WorkOrderItems` y la suma final"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/clients/:id/invoices",
+          "id": "69551ba7-7806-4e1b-9831-f4775c21818d",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "## Descripción\n\nMuestra el historial de deuda y pagos de un cliente específico"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/reports/debtors",
+          "id": "b3a33895-5e9d-4355-a86e-5aa89939de9e",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "## Descripción\n\nLista solo a los clientes con `payment_status = 'PENDIENTE'` o `DEUDA`"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/invoices",
+          "id": "d435af08-aa6a-4fce-a653-4ff6da346036",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "## Descripción\n\nGenerar factura, solo si la operación de trabajo está FINALIZADA"
+          },
+          "response": []
+        },
+        {
+          "name": "/api/invoices/:id/pay",
+          "id": "540d8d02-60e6-4f49-a802-f9511122830f",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "## Descripción\n\nMarcar factura como PAGADA"
+          },
+          "response": []
+        }
+      ],
+      "id": "134ba5d7-6152-4efd-b321-4c4b4b84d69d",
+      "description": "# Reglas de Acceso: Módulo de Facturación\n\nEste módulo gestiona el cierre financiero del ciclo de servicio. Aquí se transforman las Órdenes de Trabajo finalizadas en documentos legales de cobro (Facturas).\n\n## Flujo de Trabajo y Permisos\n\n| Rol | ¿Puede Generar Factura? | ¿Puede Marcar \"Pagada\"? | Visibilidad Financiera |\n| --- | --- | --- | --- |\n| **Dueño/Gestor** | ✅ Sí | ✅ Sí | Total. Pueden ver montos, totales y estado de deuda de cualquier cliente. |\n| **Mecánico** | ❌ No | ❌ No | Nula. No tiene acceso a ningún endpoint de este módulo (`403 Forbidden`). |\n| **Cliente** | ❌ No | ❌ No | Puede recibir la factura por email, pero no interactúa con la API de facturación directamente. |\n\n---\n\n**Reglas de Negocio Críticas:**\n\n1. **Inmutabilidad:** Una vez generada la factura (`POST /invoices`), los ítems y precios quedan congelados. No se aceptan cambios posteriores en la Orden de Trabajo.\n    \n2. **Requisito de Estado:** Solo se puede facturar una Orden de Trabajo si su estado es estrictamente `FINALIZADA`.\n    \n3. **Unicidad:** Solo puede existir **una** factura activa por Orden de Trabajo."
+    }
+  ]
+}
