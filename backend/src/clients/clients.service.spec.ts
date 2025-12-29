@@ -75,4 +75,69 @@ describe('ClientsService', () => {
       });
     });
   });
+
+  describe('findAll', () => {
+    it('should find all clients of garage', async () => {
+      const garageId = 'test-garage-id';
+      const expectedResult = [
+        {
+          id: '1',
+          name: 'Juan',
+          email: 'juan@test.com',
+          phone: '123456789',
+          garageId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '2',
+          name: 'María',
+          email: 'maria@test.com',
+          phone: '123456789',
+          garageId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+      // Configurar mock: cuando llamen a findMany, devuelve el resultado (array clientes)
+      mockPrismaService.client.findMany.mockResolvedValue(expectedResult);
+
+      // Ejecuta el método
+      const result = await service.findAll(garageId);
+
+      // Verificar el resultado
+      expect(result).toEqual(expectedResult);
+
+      //Verificar que se llamó con los parámetros correctos
+      expect(mockPrismaService.client.findMany).toHaveBeenCalledWith({
+        where: { garageId },
+        orderBy: { createdAt: 'desc' },
+      });
+    });
+  });
+
+  describe('findOne', () => {
+    it('should find client of the search', async () => {
+      const garageId = 'test-garage-id';
+      const id = 'client-uuid-123';
+      const expectedResult = {
+        id,
+        name: 'Juan',
+        email: 'juan@test.com',
+        phone: '123456789',
+        garageId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.client.findFirst.mockResolvedValue(expectedResult);
+
+      const result = await service.findOne(garageId, id);
+
+      expect(result).toEqual(expectedResult);
+      expect(mockPrismaService.client.findFirst).toHaveBeenCalledWith({
+        where: { id, garageId },
+      });
+    });
+  });
 });
