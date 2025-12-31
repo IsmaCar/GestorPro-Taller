@@ -12,9 +12,10 @@ describe('ClientsService', () => {
     // Crear mock de PrismaService - objeto falso que simula Prisma sin tocar la BD real
     mockPrismaService = {
       client: {
-        create: jest.fn(), // jest.fn() crea una función mock que podemos espiar y controlar
-        findMany: jest.fn(), // Simula el método findMany de Prisma
-        findFirst: jest.fn(), // Simula el método findFirst de Prisma
+        create: jest.fn(),
+        findMany: jest.fn(),
+        findFirst: jest.fn(),
+        update: jest.fn(),
       },
     };
 
@@ -72,6 +73,110 @@ describe('ClientsService', () => {
       // Verificar que el mock se llamó con los parámetros correctos
       expect(mockPrismaService.client.create).toHaveBeenCalledWith({
         data: { ...createClientDto, garageId }, // Debe incluir garageId (seguridad multi-tenant)
+      });
+    });
+  });
+
+  describe('findAll', () => {
+    it('should find all clients of garage', async () => {
+      const garageId = 'test-garage-id';
+      const expectedResult = [
+        {
+          id: '1',
+          name: 'Juan',
+          email: 'juan@test.com',
+          phone: '123456789',
+          garageId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '2',
+          name: 'María',
+          email: 'maria@test.com',
+          phone: '123456789',
+          garageId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+      // Configurar mock: cuando llamen a findMany, devuelve el resultado (array clientes)
+      mockPrismaService.client.findMany.mockResolvedValue(expectedResult);
+
+      // Ejecuta el método
+      const result = await service.findAll(garageId);
+
+      // Verificar el resultado
+      expect(result).toEqual(expectedResult);
+
+      //Verificar que se llamó con los parámetros correctos
+      expect(mockPrismaService.client.findMany).toHaveBeenCalledWith({
+        where: { garageId },
+        orderBy: { createdAt: 'desc' },
+      });
+    });
+  });
+
+  describe('findOne', () => {
+    it('should find client of the search', async () => {
+      const garageId = 'test-garage-id';
+      const id = 'client-uuid-123';
+      const expectedResult = {
+        id,
+        name: 'Juan',
+        email: 'juan@test.com',
+        phone: '123456789',
+        garageId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrismaService.client.findFirst.mockResolvedValue(expectedResult);
+
+      const result = await service.findOne(garageId, id);
+
+      expect(result).toEqual(expectedResult);
+      expect(mockPrismaService.client.findFirst).toHaveBeenCalledWith({
+        where: { id, garageId },
+      });
+    });
+  });
+  describe('update', () => {
+    it('should update client data', async () => {
+      const garageId = 'test-garage-id';
+      const id = 'client-uuid-123';
+
+      //Simular cliente existente
+      const existingClient = {
+        id,
+        name: 'Juan',
+        email: 'juan@test.com',
+        phone: '987654321',
+        garageId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      // Datos nuevos del cliente
+      const updateClient = {
+        email: 'new@test.com',
+        phone: '123456789',
+      };
+
+      const expectedResult = {
+        ...existingClient,
+        ...updateClient,
+        updateAt: new Date(),
+      };
+
+      mockPrismaService.client.findFirst.mockResolvedValue(existingClient);
+      mockPrismaService.client.update.mockResolvedValue(expectedResult);
+
+      const result = await service.update(garageId, id, updateClient);
+
+      expect(result).toEqual(expectedResult);
+      expect(mockPrismaService.client.update).toHaveBeenCalledWith({
+        where: { id },
+        data: updateClient,
       });
     });
   });

@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.db.dto';
+import { UpdateClientDto } from './dto/update-client,db.dto';
 
 @Controller('clients')
 export class ClientsController {
@@ -22,5 +23,11 @@ export class ClientsController {
   findOne(@Param('id') id: string) {
     const garageId = 'hardcoded-garage-id'; //Temporal
     return this.clientsService.findOne(garageId, id);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateClientDTO: UpdateClientDto) {
+    const garageId = 'hardcoded-garage-id'; //Temporal
+    return this.clientsService.update(garageId, id, updateClientDTO);
   }
 }
