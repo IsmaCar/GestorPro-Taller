@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateClientDto } from './dto/create-client.db.dto';
 import { Prisma } from 'generated/prisma';
+import { UpdateClientDto } from './dto/update-client,db.dto';
 
 @Injectable()
 export class ClientsService {
@@ -41,5 +42,23 @@ export class ClientsService {
     }
 
     return client;
+  }
+
+  async update(garageId: string, id: string, updateClientDTO: UpdateClientDto) {
+    try {
+      await this.findOne(garageId, id);
+
+      return await this.prisma.client.update({
+        where: { id },
+        data: updateClientDTO,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException('Error updating client data');
+        }
+        throw error;
+      }
+    }
   }
 }
