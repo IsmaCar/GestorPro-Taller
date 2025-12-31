@@ -12,6 +12,7 @@ describe('ClientsController', () => {
       create: jest.fn(),
       findAll: jest.fn(),
       findOne: jest.fn(),
+      update: jest.fn(),
     };
     //Módulo de testing aislado
     const module: TestingModule = await Test.createTestingModule({
@@ -50,5 +51,14 @@ describe('ClientsController', () => {
     controller.findOne(id);
 
     expect(mockClientsService.findOne).toHaveBeenCalledWith('hardcoded-garage-id', id);
+  });
+
+  it('should call service.update', () => {
+    const id = 'client-uuid-123';
+    const dto = { email: 'new@test.com', phone: '987654321' };
+
+    controller.update(id, dto);
+
+    expect(mockClientsService.update).toHaveBeenCalledWith('hardcoded-garage-id', id, dto);
   });
 });
