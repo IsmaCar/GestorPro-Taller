@@ -19,7 +19,7 @@ export class ClientsService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
-          throw new ConflictException('Client with this email already exist in this garage');
+          throw new ConflictException('Este email ya está asignado a un cliente');
         }
       }
     }
@@ -38,7 +38,7 @@ export class ClientsService {
     });
 
     if (!client) {
-      throw new NotFoundException(`Client whit ID ${id} not found`);
+      throw new NotFoundException(`Cliente con el id ${id} no encontrado`);
     }
 
     return client;
@@ -55,7 +55,7 @@ export class ClientsService {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
-          throw new ConflictException('Error updating client data');
+          throw new ConflictException('Error al actualizar los datos');
         }
         throw error;
       }
