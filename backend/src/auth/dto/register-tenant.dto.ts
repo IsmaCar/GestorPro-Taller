@@ -19,7 +19,7 @@ export class RegisterTenantDto {
 
   @IsNotEmpty()
   @IsEmail()
-  garageEmail: string;
+  adminEmail: string;
 
   @IsNotEmpty()
   @IsString()
