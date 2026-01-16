@@ -61,6 +61,7 @@ export class AuthService {
           throw new ConflictException('Ya existe un registro con estos datos');
         }
       }
+      throw error;
     }
   }
 }
