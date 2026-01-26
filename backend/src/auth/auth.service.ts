@@ -1,10 +1,16 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { RegisterTenantDto } from './dto/register-tenant.dto';
 import * as bcrypt from 'bcrypt';
 import { Prisma, UserRole } from 'generated/prisma';
 import { LoginOwnerDto } from './dto/login-owner.dto';
 import { JwtService } from '@nestjs/jwt';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -105,5 +111,32 @@ export class AuthService {
         garageId: user.garageId,
       },
     };
+  }
+
+  async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) throw new NotFoundException('El usuario no existe');
+
+    if (user.passwordHash === null)
+      throw new UnauthorizedException('La contraseña no existe o no ha sido creada');
+
+    const isPasswordValid = await bcrypt.compare(
+      changePasswordDto.currentPassword,
+      user.passwordHash,
+    );
+
+    if (!isPasswordValid) throw new UnauthorizedException('Contraseña actual incorrecta');
+
+    const hashPassword = await bcrypt.hash(changePasswordDto.newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: hashPassword },
+    });
+
+    return { message: 'Contraseña actualizada con éxito' };
   }
 }
