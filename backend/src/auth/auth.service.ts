@@ -11,6 +11,7 @@ import { Prisma, UserRole } from 'generated/prisma';
 import { LoginOwnerDto } from './dto/login-owner.dto';
 import { JwtService } from '@nestjs/jwt';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { CreateUserInvitationDto } from './dto/create-user-invitation.dto';
 
 @Injectable()
 export class AuthService {
@@ -138,5 +139,55 @@ export class AuthService {
     });
 
     return { message: 'Contraseña actualizada con éxito' };
+  }
+
+  async createUserInvitation(ownerId: string, createUserInvitationDto: CreateUserInvitationDto) {
+    const owner = await this.prisma.user.findUnique({
+      where: { id: ownerId },
+    });
+
+    if (!owner) throw new NotFoundException('Usuario no encontrado');
+
+    if (owner.rol === UserRole.OWNER)
+      throw new UnauthorizedException('Solo el dueño puede crear usuarios');
+
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        email: createUserInvitationDto.email,
+        garageId: owner.garageId,
+      },
+    });
+
+    if (existingUser)
+      throw new ConflictException('Ya existe un empleado con ese email en el taller');
+
+    const invitationToken = await bcrypt.hash(`${createUserInvitationDto.email}-${Date.now()}`, 10);
+
+    const invitationExpiresAt = new Date();
+    invitationExpiresAt.setDate(invitationExpiresAt.getDate() + 7);
+
+    const user = await this.prisma.user.create({
+      data: {
+        name: createUserInvitationDto.name,
+        email: createUserInvitationDto.email,
+        rol: createUserInvitationDto.rol,
+        garageId: owner.garageId,
+        invitationToken,
+        invitationExpiresAt,
+        emailVerified: false,
+        passwordHash: null,
+      },
+    });
+
+    return {
+      message: 'Invitación enviada exitosamente',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        rol: user.rol,
+      },
+      invitationToken, //SOLO DESARROLLO/TESTING, ELIMINAR EN PRODUCCIÓN
+    };
   }
 }
