@@ -5,6 +5,7 @@ import { LoginOwnerDto } from './dto/login-owner.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UserId } from './decorators/user-id.decorator';
+import { CreateUserInvitationDto } from './dto/create-user-invitation.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -24,11 +25,16 @@ export class AuthController {
 
   @Patch('password/change')
   @UseGuards(JwtAuthGuard)
-  changePassword(
-    @UserId() userId: string,
-    @Request() req: any,
-    @Body() changePasswordDto: ChangePasswordDto,
-  ) {
+  changePassword(@UserId() userId: string, @Body() changePasswordDto: ChangePasswordDto) {
     return this.authService.changePassword(userId, changePasswordDto);
+  }
+
+  @Post('admin/users')
+  @UseGuards(JwtAuthGuard)
+  createUserInvitation(
+    @UserId() userId: string,
+    @Body() createUserInvitationDto: CreateUserInvitationDto,
+  ) {
+    return this.authService.createUserInvitation(userId, createUserInvitationDto);
   }
 }
