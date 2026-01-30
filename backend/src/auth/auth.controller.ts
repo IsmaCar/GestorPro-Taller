@@ -6,7 +6,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UserId } from './decorators/user-id.decorator';
 import { CreateUserInvitationDto } from './dto/create-user-invitation.dto';
-import { ActivateAccountDto } from './dto/acctivate-account.dto';
+import { ActivateAccountDto } from './dto/activate-account.dto';
 
 @Controller('auth')
 export class AuthController {
