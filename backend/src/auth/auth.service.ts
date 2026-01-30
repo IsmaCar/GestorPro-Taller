@@ -12,6 +12,7 @@ import { LoginOwnerDto } from './dto/login-owner.dto';
 import { JwtService } from '@nestjs/jwt';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateUserInvitationDto } from './dto/create-user-invitation.dto';
+import { ActivateAccountDto } from './dto/acctivate-account.dto';
 
 @Injectable()
 export class AuthService {
@@ -151,7 +152,7 @@ export class AuthService {
     if (owner.rol !== UserRole.OWNER)
       throw new UnauthorizedException('Solo el dueño puede crear usuarios');
 
-    if (createUserInvitationDto.rol !== UserRole.OWNER)
+    if (createUserInvitationDto.rol === UserRole.OWNER)
       throw new ConflictException('No se puede crear otro usuario "Dueño"');
 
     const existingUser = await this.prisma.user.findFirst({
@@ -192,5 +193,37 @@ export class AuthService {
       },
       invitationToken, //SOLO DESARROLLO/TESTING, ELIMINAR EN PRODUCCIÓN
     };
+  }
+
+  async activateAccount(activateAccountDto: ActivateAccountDto) {
+    const user = await this.prisma.user.findFirst({
+      where: { invitationToken: activateAccountDto.InvitationToken },
+    });
+
+    if (!user) throw new NotFoundException('El usuario no ha sido invitado');
+
+    if (!user.invitationExpiresAt || user.invitationExpiresAt < new Date())
+      throw new UnauthorizedException('La invitación expiró o no existe');
+
+    if (user.passwordHash !== null)
+      throw new ConflictException('El usuario ya ha creado la contraseña');
+
+    const hashPassword = await bcrypt.hash(activateAccountDto.password, 10);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: hashPassword, emailVerified: true, invitationToken: null },
+    });
+
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      garageId: user.garageId,
+      rol: user.rol,
+    };
+
+    const access_token = this.jwtService.sign(payload);
+
+    return { access_token };
   }
 }
