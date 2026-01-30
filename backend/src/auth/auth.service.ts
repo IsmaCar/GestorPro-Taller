@@ -12,7 +12,7 @@ import { LoginOwnerDto } from './dto/login-owner.dto';
 import { JwtService } from '@nestjs/jwt';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateUserInvitationDto } from './dto/create-user-invitation.dto';
-import { ActivateAccountDto } from './dto/acctivate-account.dto';
+import { ActivateAccountDto } from './dto/activate-account.dto';
 
 @Injectable()
 export class AuthService {
