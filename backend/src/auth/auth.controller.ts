@@ -29,6 +29,7 @@ export class AuthController {
     return this.authService.changePassword(userId, changePasswordDto);
   }
 
+  @HttpCode(201)
   @Post('admin/users')
   @UseGuards(JwtAuthGuard)
   createUserInvitation(
