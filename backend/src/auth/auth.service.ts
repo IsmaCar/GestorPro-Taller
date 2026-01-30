@@ -148,8 +148,11 @@ export class AuthService {
 
     if (!owner) throw new NotFoundException('Usuario no encontrado');
 
-    if (owner.rol === UserRole.OWNER)
+    if (owner.rol !== UserRole.OWNER)
       throw new UnauthorizedException('Solo el dueño puede crear usuarios');
+
+    if (createUserInvitationDto.rol !== UserRole.OWNER)
+      throw new ConflictException('No se puede crear otro usuario "Dueño"');
 
     const existingUser = await this.prisma.user.findFirst({
       where: {
