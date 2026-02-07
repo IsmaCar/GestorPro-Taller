@@ -1,5 +1,7 @@
 import {
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -33,7 +35,6 @@ export class AuthService {
             fiscalId: registerTenantDto.fiscalId,
           },
         });
-
         //Crear Admin (Dueño)
         const user = await prisma.user.create({
           data: {
@@ -44,15 +45,17 @@ export class AuthService {
             garageId: garage.id,
           },
         });
-
         //Actualizar el campo userId en garage con el user creado
         await prisma.garage.update({
           where: { id: garage.id },
           data: { adminUserId: user.id },
         });
-
         return {
-          garage,
+          garage: {
+            id: garage.id,
+            name: garage.name,
+            fiscalId: garage.fiscalId,
+          },
           user: {
             id: user.id,
             name: user.name,
@@ -153,7 +156,7 @@ export class AuthService {
       throw new UnauthorizedException('Solo el dueño puede crear usuarios');
 
     if (createUserInvitationDto.rol === UserRole.OWNER)
-      throw new ConflictException('No se puede crear otro usuario "Dueño"');
+      throw new ForbiddenException('No se puede crear otro usuario "Dueño"');
 
     const existingUser = await this.prisma.user.findFirst({
       where: {
@@ -197,10 +200,10 @@ export class AuthService {
 
   async activateAccount(activateAccountDto: ActivateAccountDto) {
     const user = await this.prisma.user.findFirst({
-      where: { invitationToken: activateAccountDto.InvitationToken },
+      where: { invitationToken: activateAccountDto.invitationToken },
     });
 
-    if (!user) throw new NotFoundException('El usuario no ha sido invitado');
+    if (!user) throw new BadRequestException('Token de invitación inválido');
 
     if (!user.invitationExpiresAt || user.invitationExpiresAt < new Date())
       throw new UnauthorizedException('La invitación expiró o no existe');
