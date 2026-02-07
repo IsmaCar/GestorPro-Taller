@@ -39,7 +39,7 @@ export class AuthController {
   ) {
     return this.authService.createUserInvitation(userId, createUserInvitationDto);
   }
-
+  @HttpCode(200)
   @Post('activate-account')
   activateAccount(@Body() activateAccountDto: ActivateAccountDto) {
     return this.authService.activateAccount(activateAccountDto);
