@@ -15,12 +15,14 @@ import { JwtService } from '@nestjs/jwt';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateUserInvitationDto } from './dto/create-user-invitation.dto';
 import { ActivateAccountDto } from './dto/activate-account.dto';
+import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private emailService: EmailService,
   ) {}
 
   async registerTenant(registerTenantDto: RegisterTenantDto) {
@@ -148,6 +150,7 @@ export class AuthService {
   async createUserInvitation(ownerId: string, createUserInvitationDto: CreateUserInvitationDto) {
     const owner = await this.prisma.user.findUnique({
       where: { id: ownerId },
+      include: { garage: true },
     });
 
     if (!owner) throw new NotFoundException('Usuario no encontrado');
@@ -186,6 +189,13 @@ export class AuthService {
       },
     });
 
+    // Enviar email de invitación
+    const emailResult = await this.emailService.sendInvitationEmail(
+      user.email,
+      invitationToken,
+      owner.garage.name, // Nombre del garage
+    );
+
     return {
       message: 'Invitación enviada exitosamente',
       user: {
@@ -194,6 +204,7 @@ export class AuthService {
         email: user.email,
         rol: user.rol,
       },
+      emailSent: emailResult.success,
       invitationToken, //SOLO DESARROLLO/TESTING, ELIMINAR EN PRODUCCIÓN
     };
   }
