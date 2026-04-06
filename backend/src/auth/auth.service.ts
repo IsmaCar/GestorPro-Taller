@@ -9,7 +9,7 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { RegisterTenantDto } from './dto/register-tenant.dto';
 import * as bcrypt from 'bcrypt';
-import { Prisma, UserRole } from 'generated/prisma';
+import { Prisma, UserRole } from '@prisma/client';
 import { LoginOwnerDto } from './dto/login-owner.dto';
 import { JwtService } from '@nestjs/jwt';
 import { ChangePasswordDto } from './dto/change-password.dto';
