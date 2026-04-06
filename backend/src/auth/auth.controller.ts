@@ -31,7 +31,7 @@ export class AuthController {
   }
 
   @HttpCode(201)
-  @Post('admin/users')
+  @Post('admin/invitation')
   @UseGuards(JwtAuthGuard)
   createUserInvitation(
     @UserId() userId: string,
