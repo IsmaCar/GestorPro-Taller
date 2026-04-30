@@ -26,7 +26,7 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/mapped-types": "^2.1.0",
-    "@nestjs/passport": "^10.0.3",
+    "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
@@ -78,7 +78,7 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)s$": ["ts-jest", { "tsconfig": "tsconfig.spec.json" }]
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"
@@ -86,7 +86,6 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
-      "^src/(.*)$": "<rootDir>/$1",
       "^generated/(.*)$": "<rootDir>/../generated/$1"
     }
   }
