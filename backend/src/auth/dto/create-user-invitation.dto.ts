@@ -4,13 +4,13 @@ import { UserRole } from '@prisma/client';
 export class CreateUserInvitationDto {
   @IsNotEmpty()
   @IsString()
-  name: string;
+  name!: string;
 
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsNotEmpty()
   @IsEnum(UserRole)
-  rol: UserRole;
+  rol!: UserRole;
 }
