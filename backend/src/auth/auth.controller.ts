@@ -1,4 +1,15 @@
-import { Controller, Post, Body, HttpCode, UseGuards, Patch, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  UseGuards,
+  Patch,
+  Get,
+  Query,
+  Res,
+} from '@nestjs/common';
+import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterTenantDto } from './dto/register-tenant.dto';
 import { LoginOwnerDto } from './dto/login-owner.dto';
@@ -38,6 +49,13 @@ export class AuthController {
     @Body() createUserInvitationDto: CreateUserInvitationDto,
   ) {
     return this.authService.createUserInvitation(userId, createUserInvitationDto);
+  }
+
+  @Get('activate-account')
+  redirectToActivation(@Query('token') token: string, @Res() res: Response) {
+    // Redirigir al frontend con el token
+    const frontendUrl = process.env.FRONTEND_URL;
+    return res.redirect(`${frontendUrl}/activate-account?token=${encodeURIComponent(token)}`);
   }
   @HttpCode(200)
   @Post('activate-account')
