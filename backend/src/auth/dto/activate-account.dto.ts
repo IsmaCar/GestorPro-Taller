@@ -3,10 +3,10 @@ import { IsNotEmpty, IsString, MinLength } from 'class-validator';
 export class ActivateAccountDto {
   @IsNotEmpty()
   @IsString()
-  invitationToken: string;
+  invitationToken!: string;
 
   @IsNotEmpty()
   @IsString()
   @MinLength(8)
-  password: string;
+  password!: string;
 }

@@ -4,25 +4,25 @@ export class RegisterTenantDto {
   @IsNotEmpty()
   @IsString()
   @MinLength(3)
-  garageName: string;
+  garageName!: string;
 
   @IsNotEmpty()
   @IsString()
   @Matches(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]+\s+[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]+\s+[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]+.*$/, {
     message: 'el nombre del dueño debe contener el nombre y sus dos apellidos',
   })
-  adminName: string;
+  adminName!: string;
 
   @IsNotEmpty()
   @IsString()
-  fiscalId: string;
+  fiscalId!: string;
 
   @IsNotEmpty()
   @IsEmail()
-  adminEmail: string;
+  adminEmail!: string;
 
   @IsNotEmpty()
   @IsString()
   @MinLength(3)
-  password: string;
+  password!: string;
 }

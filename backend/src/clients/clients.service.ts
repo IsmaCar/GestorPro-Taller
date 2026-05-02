@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateClientDto } from './dto/create-client.db.dto';
 import { Prisma } from '@prisma/client';
 import { UpdateClientDto } from './dto/update-client,db.dto';
