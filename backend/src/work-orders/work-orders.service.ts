@@ -12,13 +12,6 @@ import { Prisma, StateOrder, UserRole } from '@prisma/client';
 export class WorkOrdersService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(garageId: string) {
-    return await this.prisma.workOrders.findMany({
-      where: { garageId },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
   async create(garageId: string, userId: string, dto: CreateWorkOrderDto) {
     try {
       return await this.prisma.$transaction(async (tx) => {
@@ -86,5 +79,22 @@ export class WorkOrdersService {
       }
       throw error;
     }
+  }
+  async findAll(garageId: string) {
+    return await this.prisma.workOrders.findMany({
+      where: { garageId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findOne(garageId: string, id: string) {
+    const order = await this.prisma.workOrders.findFirst({
+      where: { id, garageId },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Orden de trabajo no encontrada`);
+    }
+    return order;
   }
 }
