@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { WorkOrdersService } from './work-orders.service';
 import { CreateWorkOrderDto } from './dto/create-work-order.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -24,5 +33,11 @@ export class WorkOrdersController {
   @Get()
   findAll(@GarageId() garageId: string) {
     return this.workOrdersService.findAll(garageId);
+  }
+
+  @HttpCode(200)
+  @Get('/:id')
+  findOne(@GarageId() garageId: string, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.workOrdersService.findOne(garageId, id);
   }
 }
