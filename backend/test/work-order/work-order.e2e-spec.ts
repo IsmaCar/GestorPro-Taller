@@ -38,7 +38,7 @@ describe('Work-order (e2e)', () => {
 
   beforeEach(async () => {
     // Clean up database before each test to ensure isolated state
-    await prisma.workOrders.deleteMany({});
+    await prisma.garage.deleteMany({});
   });
 
   afterAll(async () => {
@@ -158,6 +158,80 @@ describe('Work-order (e2e)', () => {
 
       // Verify: Should return 201 Created status
       expect(response.status).toBe(201);
+    });
+  });
+
+  describe('GET /work-orders', () => {
+    it('should return 200 and list work orders', async () => {
+      // Step 1: Register a new garage tenant with unique fiscalId and email
+      const createTenant = {
+        adminName: 'Ismael Carballo Martín',
+        garageName: 'Talleres Carballo',
+        fiscalId: Date.now().toString(),
+        adminEmail: 'carballomartinismael' + Date.now() + '@gmail.com',
+        password: 'password123',
+      };
+      await request(app.getHttpServer()).post('/auth/register-tenant').send(createTenant);
+
+      const loginOwner = await request(app.getHttpServer()).post('/auth/login-owner').send({
+        email: createTenant.adminEmail,
+        password: createTenant.password,
+      });
+
+      const token = loginOwner.body.access_token;
+      const garageId = loginOwner.body.user.garageId;
+
+      // Step 2: Create a client directly in DB via Prisma
+      const client = await prisma.client.create({
+        data: {
+          garageId,
+          name: 'Juan Pérez',
+          email: 'juan' + Date.now() + '@gmail.com',
+          phone: '123456789',
+        },
+      });
+
+      // Step 3: Create a vehicle directly in DB via Prisma
+      const vehicleData = await prisma.vehicle.create({
+        data: {
+          licensePlate: Date.now().toString(),
+          brand: 'Toyota',
+          model: 'Corolla',
+          garageId: garageId,
+          clientId: client.id,
+        },
+      });
+
+      // Step 4: Create a work order directly in DB via Prisma
+      const createOrder = {
+        clientId: client.id,
+        vehicleId: vehicleData.id,
+        description: 'Test work order',
+        openingDate: new Date().toISOString(),
+      };
+
+      const responseOrder = await request(app.getHttpServer())
+        .post('/work-orders')
+        .set('Authorization', `Bearer ${token}`)
+        .send(createOrder);
+
+      expect(responseOrder.status).toBe(201);
+
+      if (typeof responseOrder.body?.id !== 'string') {
+        throw new Error('POST /work-orders did not return a valid string id');
+      }
+      const createdOrderId: string = String(responseOrder.body.id);
+
+      const allOrders = await request(app.getHttpServer())
+        .get('/work-orders')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(allOrders.status).toBe(200);
+      expect(Array.isArray(allOrders.body)).toBe(true);
+      expect(allOrders.body.length).toBeGreaterThan(0);
+      expect(allOrders.body.some((order: { id: string }) => order.id === createdOrderId)).toBe(
+        true,
+      );
     });
   });
 });
