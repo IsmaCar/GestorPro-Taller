@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
@@ -52,4 +53,8 @@ export class WorkOrdersController {
   ) {
     return this.workOrdersService.update(garageId, id, updateWorkOrderDto);
   }
+
+  @HttpCode(204)
+  @Delete('/:id')
+  delete(@GarageId() garageId: string, @Param('id', new ParseUUIDPipe()) id: string) {}
 }
