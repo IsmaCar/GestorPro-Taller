@@ -103,8 +103,8 @@ export class WorkOrdersService {
       return await this.prisma.$transaction(async (tx) => {
         const order = await tx.workOrders.findFirst({
           where: {
-            garageId: garageId,
-            id: id,
+            garageId,
+            id,
           },
         });
         if (!order) {
@@ -154,5 +154,18 @@ export class WorkOrdersService {
       }
       throw error;
     }
+  }
+
+  async delete(garageId: string, id: string) {
+    const order = await this.prisma.workOrders.findFirst({
+      where: { garageId, id },
+    });
+
+    if (!order) {
+      throw new NotFoundException('No existe la orden');
+    }
+    await this.prisma.workOrders.delete({
+      where: { garageId, id },
+    });
   }
 }
