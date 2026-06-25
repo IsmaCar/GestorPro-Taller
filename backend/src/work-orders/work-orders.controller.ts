@@ -5,6 +5,7 @@ import {
   HttpCode,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import { CreateWorkOrderDto } from './dto/create-work-order.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserId } from '../auth/decorators/user-id.decorator';
 import { GarageId } from '../auth/decorators/garage-id.decorator';
+import { UpdateWorkOrderDto } from './dto/update-work-order';
 
 @UseGuards(JwtAuthGuard)
 @Controller('work-orders')
@@ -39,5 +41,15 @@ export class WorkOrdersController {
   @Get('/:id')
   findOne(@GarageId() garageId: string, @Param('id', new ParseUUIDPipe()) id: string) {
     return this.workOrdersService.findOne(garageId, id);
+  }
+
+  @HttpCode(200)
+  @Patch(':id')
+  update(
+    @Body() updateWorkOrderDto: UpdateWorkOrderDto,
+    @GarageId() garageId: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.workOrdersService.update(garageId, id, updateWorkOrderDto);
   }
 }
