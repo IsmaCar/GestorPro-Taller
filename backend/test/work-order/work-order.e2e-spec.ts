@@ -67,7 +67,7 @@ describe('Work-order (e2e)', () => {
     });
 
     it('should return 401 when token is invalid', async () => {
-      // Test: POST with malformed/fake token should reject request
+      // Invalid token
       const data = buildInvalidWorkOrderPayload();
       const response = await request(app.getHttpServer())
         .post('/work-orders')
@@ -77,10 +77,10 @@ describe('Work-order (e2e)', () => {
     });
 
     it('should return 401 when token is expired', async () => {
-      // Test: POST with expired JWT token should reject request
+      // Expired token
       const data = buildInvalidWorkOrderPayload();
 
-      // Create a fake JWT token that expires immediately (expiresIn: '-1s')
+      // Token already expired
       const tokenExpired = jwt.sign({ sub: 'user-id', email: 'user@example.com' }, 'secret', {
         expiresIn: '-1s',
       });
@@ -101,11 +101,12 @@ describe('Work-order (e2e)', () => {
 
       const response = await createWorkOrderRequest(app.getHttpServer(), token, createOrder);
 
-      // Verify: Should return 201 Created status
+      // Created
       expect(response.status).toBe(201);
     });
   });
 
+  // List work orders
   describe('GET /work-orders', () => {
     it('should return 200 and list work orders', async () => {
       const { token, garageId } = await registerAndLoginOwner(app.getHttpServer());
@@ -117,6 +118,7 @@ describe('Work-order (e2e)', () => {
 
       expect(responseOrder.status).toBe(201);
 
+      // Ensure created id exists
       if (typeof responseOrder.body?.id !== 'string') {
         throw new Error('POST /work-orders did not return a valid string id');
       }
@@ -130,6 +132,43 @@ describe('Work-order (e2e)', () => {
       expect(allOrders.body.some((order: { id: string }) => order.id === createdOrderId)).toBe(
         true,
       );
+    });
+
+    it('should isolate data between tenants in GET /work-orders', async () => {
+      // Tenant A creates one order
+      const tenantA = await registerAndLoginOwner(app.getHttpServer());
+      const clientA = await createClientFixture(prisma, tenantA.garageId);
+      const vehicleA = await createVehicleFixture(prisma, tenantA.garageId, clientA.id);
+      const orderPayloadA = buildWorkOrderPayload(clientA.id, vehicleA.id);
+
+      const createdA = await createWorkOrderRequest(
+        app.getHttpServer(),
+        tenantA.token,
+        orderPayloadA,
+      );
+      expect(createdA.status).toBe(201);
+
+      if (typeof createdA.body?.id !== 'string') {
+        throw new Error('POST /work-orders did not return a valid string id');
+      }
+      const orderAId = createdA.body.id as string;
+
+      // Tenant B is isolated
+      const tenantB = await registerAndLoginOwner(app.getHttpServer());
+
+      // Query both tenants
+      const listB = await getWorkOrdersRequest(app.getHttpServer(), tenantB.token);
+      const listA = await getWorkOrdersRequest(app.getHttpServer(), tenantA.token);
+
+      // B cannot see A's order
+      expect(listB.status).toBe(200);
+      expect(Array.isArray(listB.body)).toBe(true);
+      expect(listB.body.some((order: { id: string }) => order.id === orderAId)).toBe(false);
+
+      // A can see its own order
+      expect(listA.status).toBe(200);
+      expect(Array.isArray(listA.body)).toBe(true);
+      expect(listA.body.some((order: { id: string }) => order.id === orderAId)).toBe(true);
     });
   });
 
