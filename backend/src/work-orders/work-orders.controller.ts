@@ -45,7 +45,7 @@ export class WorkOrdersController {
   }
 
   @HttpCode(200)
-  @Patch(':id')
+  @Patch('/:id')
   update(
     @Body() updateWorkOrderDto: UpdateWorkOrderDto,
     @GarageId() garageId: string,
@@ -56,5 +56,7 @@ export class WorkOrdersController {
 
   @HttpCode(204)
   @Delete('/:id')
-  delete(@GarageId() garageId: string, @Param('id', new ParseUUIDPipe()) id: string) {}
+  delete(@GarageId() garageId: string, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.workOrdersService.delete(garageId, id);
+  }
 }
