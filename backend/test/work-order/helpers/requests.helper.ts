@@ -18,3 +18,6 @@ export const createWorkOrderRequest = (
 
 export const getWorkOrdersRequest = (httpServer: HttpServer, token: string) =>
   request(httpServer).get('/work-orders').set('Authorization', `Bearer ${token}`);
+
+export const getWorkOrderByIdRequest = (httpServer: HttpServer, token: string, id: string) =>
+  request(httpServer).get(`/work-orders/${id}`).set('Authorization', `Bearer ${token}`);
