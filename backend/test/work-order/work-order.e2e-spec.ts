@@ -11,7 +11,11 @@ import {
   createClientFixture,
   createVehicleFixture,
 } from './helpers/fixtures.helper';
-import { createWorkOrderRequest, getWorkOrdersRequest } from './helpers/requests.helper';
+import {
+  createWorkOrderRequest,
+  getWorkOrderByIdRequest,
+  getWorkOrdersRequest,
+} from './helpers/requests.helper';
 
 // E2E Test Suite for work-orders module
 // Tests authentication validation and CRUD operations
@@ -172,5 +176,36 @@ describe('Work-order (e2e)', () => {
     });
   });
 
-  describe('GET /work-orders/:id', () => {});
+  describe('GET /work-orders/:id', () => {
+    it('should return 200 and correct data when token and id is valid', async () => {
+      const { token, garageId } = await registerAndLoginOwner(app.getHttpServer());
+      const client = await createClientFixture(prisma, garageId);
+      const vehicle = await createVehicleFixture(prisma, garageId, client.id);
+
+      const createOrder = buildWorkOrderPayload(client.id, vehicle.id);
+      const responseOrder = await createWorkOrderRequest(app.getHttpServer(), token, createOrder);
+
+      expect(responseOrder.status).toBe(201);
+
+      const createdOrderId: string = String(responseOrder.body.id);
+
+      const orderById = await getWorkOrderByIdRequest(app.getHttpServer(), token, createdOrderId);
+
+      expect(orderById.status).toBe(200);
+      expect(orderById.body).toBeDefined();
+      expect(orderById.body.id).toBe(createdOrderId);
+      expect(orderById.body.clientId).toBe(client.id);
+      expect(orderById.body.vehicleId).toBe(vehicle.id);
+    });
+
+    it('should return 404 when no have order', async () => {
+      const { token } = await registerAndLoginOwner(app.getHttpServer());
+
+      const fakeId = '550e8400-e29b-41d4-a716-446655440000';
+
+      const orderById = await getWorkOrderByIdRequest(app.getHttpServer(), token, fakeId);
+
+      expect(orderById.status).toBe(404);
+    });
+  });
 });
