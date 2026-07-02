@@ -8,6 +8,12 @@ type WorkOrderBody = {
   assignedMechanic?: string;
 };
 
+type WorkOrderPatchBody = {
+  description?: string;
+  assignedMechanic?: string;
+  state?: string;
+};
+
 type HttpServer = Parameters<typeof request>[0];
 
 export const createWorkOrderRequest = (
@@ -21,3 +27,14 @@ export const getWorkOrdersRequest = (httpServer: HttpServer, token: string) =>
 
 export const getWorkOrderByIdRequest = (httpServer: HttpServer, token: string, id: string) =>
   request(httpServer).get(`/work-orders/${id}`).set('Authorization', `Bearer ${token}`);
+
+export const updateWorkOrderRequest = (
+  httpServer: HttpServer,
+  token: string,
+  id: string,
+  body: WorkOrderPatchBody,
+) =>
+  request(httpServer)
+    .patch(`/work-orders/${id}`)
+    .set('Authorization', `Bearer ${token}`)
+    .send(body);
