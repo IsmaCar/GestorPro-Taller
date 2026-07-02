@@ -207,5 +207,37 @@ describe('Work-order (e2e)', () => {
 
       expect(orderById.status).toBe(404);
     });
+
+    it('should isolate data between tenants in GET /work-orders/:id', async () => {
+      // Tenant A creates one order
+      const tenantA = await registerAndLoginOwner(app.getHttpServer());
+      const clientA = await createClientFixture(prisma, tenantA.garageId);
+      const vehicleA = await createVehicleFixture(prisma, tenantA.garageId, clientA.id);
+      const orderPayloadA = buildWorkOrderPayload(clientA.id, vehicleA.id);
+
+      const createdA = await createWorkOrderRequest(
+        app.getHttpServer(),
+        tenantA.token,
+        orderPayloadA,
+      );
+      expect(createdA.status).toBe(201);
+
+      const orderAId: string = String(createdA.body.id);
+
+      // Tenant B is isolated
+      const tenantB = await registerAndLoginOwner(app.getHttpServer());
+
+      // Query both tenants
+      const listB = await getWorkOrderByIdRequest(app.getHttpServer(), tenantB.token, orderAId);
+      const listA = await getWorkOrderByIdRequest(app.getHttpServer(), tenantA.token, orderAId);
+
+      // B cannot see A's order
+      expect(listB.status).toBe(404);
+
+      // A can see its own order
+      expect(listA.status).toBe(200);
+      expect(listA.body).toBeDefined();
+      expect(listA.body.id).toBe(orderAId);
+    });
   });
 });
