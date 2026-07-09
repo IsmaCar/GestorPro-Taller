@@ -15,6 +15,7 @@ import {
   createWorkOrderRequest,
   getWorkOrderByIdRequest,
   getWorkOrdersRequest,
+  updateWorkOrderRequest,
 } from './helpers/requests.helper';
 
 // E2E Test Suite for work-orders module
@@ -239,5 +240,26 @@ describe('Work-order (e2e)', () => {
       expect(listA.body).toBeDefined();
       expect(listA.body.id).toBe(orderAId);
     });
+  });
+  it('should return 200 and data when update description is valid', async () => {
+    const { token, garageId } = await registerAndLoginOwner(app.getHttpServer());
+    const client = await createClientFixture(prisma, garageId);
+    const vehicle = await createVehicleFixture(prisma, garageId, client.id);
+    const orderPayLoad = buildWorkOrderPayload(client.id, vehicle.id);
+    const workOrder = await createWorkOrderRequest(app.getHttpServer(), token, orderPayLoad);
+
+    const orderId: string = String(workOrder.body.id);
+    const patchBody = { description: 'Descripcion actualizada' };
+
+    const updateOrder = await updateWorkOrderRequest(
+      app.getHttpServer(),
+      token,
+      orderId,
+      patchBody,
+    );
+
+    expect(updateOrder.status).toBe(200);
+    expect(updateOrder.body.id).toBe(orderId);
+    expect(updateOrder.body.description).toBe('Descripcion actualizada');
   });
 });
