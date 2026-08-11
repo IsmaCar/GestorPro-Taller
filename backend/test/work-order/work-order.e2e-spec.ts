@@ -241,6 +241,7 @@ describe('Work-order (e2e)', () => {
       expect(listA.body.id).toBe(orderAId);
     });
   });
+
   it('should return 200 and data when update description is valid', async () => {
     const { token, garageId } = await registerAndLoginOwner(app.getHttpServer());
     const client = await createClientFixture(prisma, garageId);
@@ -261,5 +262,15 @@ describe('Work-order (e2e)', () => {
     expect(updateOrder.status).toBe(200);
     expect(updateOrder.body.id).toBe(orderId);
     expect(updateOrder.body.description).toBe('Descripcion actualizada');
+  });
+
+  it('should return 404 when id is not found', async () => {
+    const { token } = await registerAndLoginOwner(app.getHttpServer());
+
+    const fakeId = '550e8400-e29b-41d4-a716-446655440000';
+
+    const response = await getWorkOrderByIdRequest(app.getHttpServer(), token, fakeId);
+
+    expect(response.status).toBe(404);
   });
 });
