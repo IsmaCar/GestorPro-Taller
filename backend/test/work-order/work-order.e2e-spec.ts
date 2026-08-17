@@ -13,10 +13,12 @@ import {
 } from './helpers/fixtures.helper';
 import {
   createWorkOrderRequest,
+  deleteWorkOrderRequest,
   getWorkOrderByIdRequest,
   getWorkOrdersRequest,
   updateWorkOrderRequest,
 } from './helpers/requests.helper';
+import { GarageId } from '../../src/auth/decorators/garage-id.decorator';
 
 // E2E Test Suite for work-orders module
 // Tests authentication validation and CRUD operations
@@ -270,6 +272,26 @@ describe('Work-order (e2e)', () => {
     const fakeId = '550e8400-e29b-41d4-a716-446655440000';
 
     const response = await getWorkOrderByIdRequest(app.getHttpServer(), token, fakeId);
+
+    expect(response.status).toBe(404);
+  });
+
+  it('should return 204 when id is found in method delete', async () => {
+    const { token, garageId } = await registerAndLoginOwner(app.getHttpServer());
+    const client = await createClientFixture(prisma, garageId);
+    const vehicle = await createVehicleFixture(prisma, garageId, client.id);
+    const orderPayLoad = buildWorkOrderPayload(client.id, vehicle.id);
+    const workOrder = await createWorkOrderRequest(app.getHttpServer(), token, orderPayLoad);
+
+    const response = await deleteWorkOrderRequest(app.getHttpServer(), token, workOrder.body.id);
+
+    expect(response.status).toBe(204);
+  });
+
+  it('should return 404 when id is not found in method delete', async () => {
+    const { token } = await registerAndLoginOwner(app.getHttpServer());
+    const fakeId = '550e8400-e29b-41d4-a716-446655440000';
+    const response = await deleteWorkOrderRequest(app.getHttpServer(), token, fakeId);
 
     expect(response.status).toBe(404);
   });
