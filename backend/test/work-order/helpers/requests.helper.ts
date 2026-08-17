@@ -38,3 +38,6 @@ export const updateWorkOrderRequest = (
     .patch(`/work-orders/${id}`)
     .set('Authorization', `Bearer ${token}`)
     .send(body);
+
+export const deleteWorkOrderRequest = (httpServer: HttpServer, token: string, id: string) =>
+  request(httpServer).delete(`/work-orders/${id}`).set('Authorization', `Bearer ${token}`);
