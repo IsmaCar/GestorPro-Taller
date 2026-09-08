@@ -5,6 +5,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ClientsModule } from './clients/clients.module';
 import { EmailModule } from './email/email.module';
 import { WorkOrdersModule } from './work-orders/work-orders.module';
+import { VehiclesModule } from './vehicles/vehicles.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { WorkOrdersModule } from './work-orders/work-orders.module';
     ClientsModule,
     EmailModule,
     WorkOrdersModule,
+    VehiclesModule,
   ],
   controllers: [],
   providers: [],
